@@ -1,0 +1,37 @@
+import { Catch, ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
+
+@Catch(RpcException)
+export class RpcCustomExceptionFilter implements ExceptionFilter {
+  catch(exception: RpcException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+
+    const rpcError = exception.getError();
+
+    if(rpcError.toString().includes('Empty response')){
+      return response.status(500).json({
+        status : 500,
+        message : rpcError.toString().substring(0 , rpcError.toString().indexOf('(') - 1)
+      })
+    }
+    if (
+      typeof rpcError === 'object' &&
+      rpcError !== null &&
+      'status' in rpcError &&
+      'message' in rpcError
+    ) {
+      // TypeScript no puede inferir el tipo, así que hacemos una aserción segura
+      const { status, message } = rpcError as { status: any; message: any };
+
+      const numericStatus = isNaN(+status) ? 400 : +status;
+
+      return response.status(numericStatus).json({ status: numericStatus, message });
+    }
+
+    response.status(400).json({
+      status: 400,
+      message: "ERROR ooooo",
+    });
+  }
+}
