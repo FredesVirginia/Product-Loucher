@@ -1,3 +1,4 @@
+import { OrderReceipt } from './../../node_modules/.prisma/client/index.d';
 import {
   HttpStatus,
   Inject,
@@ -10,7 +11,7 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { PrismaClient } from '@prisma/client';
 import { firstValueFrom } from 'rxjs';
 import { NATS_SERVICE } from 'src/config';
-import { ChangeOrderStatusDto, CreateOrderDto } from './dto';
+import { ChangeOrderStatusDto, CreateOrderDto, PaidOrderDto } from './dto';
 import { OrderPaginationDto } from './dto/order-pagination.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderWithProducts } from './enums/interface/OrderWithProduct';
@@ -188,5 +189,29 @@ export class OrdersService extends PrismaClient implements OnModuleInit {
 
   remove(id: number) {
     return `This action removes a #${id} order`;
+  }
+
+
+  async paidOrder (paidOrderDto : PaidOrderDto){
+    this.logger.log("Order Paid")
+    this.logger.log(paidOrderDto)
+    await this.order.update({
+      where : { id : paidOrderDto.orderId},
+      data : {
+        status: "PAID",
+        paid : true,
+        paiAt : new Date(),
+        stripeChargeId : paidOrderDto.stripePaymentId,
+
+        //LA RELACION CON LA TABLA ORDERPAIDE
+        OrderReceipt : {
+          create: {
+            receipUrl : paidOrderDto.receiptUrl
+          }
+        }
+      }
+    });
+
+    return this.order
   }
 }
