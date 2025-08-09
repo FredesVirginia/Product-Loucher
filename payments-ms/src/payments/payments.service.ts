@@ -1,13 +1,13 @@
 import Stripe from 'stripe';
 import { envs } from './../config/envs';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PaymentSeccionDto } from './dto/payments-session.dto';
 import { Request, Response } from 'express';
 
 @Injectable()
 export class PaymentsService {
     private readonly stripe = new Stripe(envs.stripe_secret)
-
+    private readonly logger = new Logger("PaymentService")
     async createPaymenstSession(paymentSessionDto : PaymentSeccionDto){
 
         const {currency , items , orderId} = paymentSessionDto;
@@ -70,10 +70,12 @@ export class PaymentsService {
     switch (event.type) {
         case 'charge.succeeded':
             const changeSucceded = event.data.object;
-            // TODO: llamar a nuestro microservicio
-            console.log({
-                metadata: changeSucceded
-            });
+            const payload = {
+                stripePaymentId : changeSucceded.id,
+                orderId : changeSucceded.metadata.orderId,
+                receipUrl : changeSucceded.receipt_url,
+            }
+            this.logger.log({payload})
             break;
         default:
             console.log(`⚠️ Evento no controlado: ${event.type}`);
